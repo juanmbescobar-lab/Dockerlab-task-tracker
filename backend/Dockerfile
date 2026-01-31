@@ -5,7 +5,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copiamos solo package.json primero (optimización de cache)
-COPY package.json ./
+COPY package*.json ./
 
 # Instalamos dependencias
 RUN npm install

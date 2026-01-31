@@ -1,40 +1,78 @@
-const API_URL = "http://localhost:3000";
+// script.js
+const API_URL = "http://backend:3000/tasks"; // backend dentro de Docker Compose
 
-const taskList = document.getElementById("task-list");
-const form = document.getElementById("task-form");
-const input = document.getElementById("task-input");
+let tasks = [];
 
-async function loadTasks() {
-  const res = await fetch(`${API_URL}/tasks`);
-  const tasks = await res.json();
+// Obtener tareas al cargar la página
+async function fetchTasks() {
+  try {
+    const response = await fetch(API_URL);
+    tasks = await response.json();
+    renderTasks();
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+  }
+}
 
-  taskList.innerHTML = "";
+// Renderizar tareas en el DOM
+function renderTasks() {
+  const list = document.getElementById("task-list");
+  if (!list) return;
+  list.innerHTML = ""; // Limpiar lista antes de renderizar
   tasks.forEach(task => {
     const li = document.createElement("li");
     li.textContent = task.title;
 
-    li.onclick = async () => {
-      await fetch(`${API_URL}/tasks/${task.id}`, {
-        method: "DELETE"
-      });
-      loadTasks();
-    };
+    // Botón de eliminar
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Eliminar";
+    deleteBtn.onclick = () => deleteTask(task.id);
 
-    taskList.appendChild(li);
+    li.appendChild(deleteBtn);
+    list.appendChild(li);
   });
 }
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+// Agregar nueva tarea
+async function addTask(title) {
+  if (!title) return;
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title })
+    });
 
-  await fetch(`${API_URL}/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: input.value })
+    const newTask = await response.json();
+    // Actualizar array de tareas y refrescar la lista
+    tasks.push(newTask);
+    renderTasks();
+  } catch (error) {
+    console.error("Error adding task:", error);
+  }
+}
+
+// Eliminar tarea por id
+async function deleteTask(id) {
+  try {
+    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    tasks = tasks.filter(task => task.id !== id);
+    renderTasks();
+  } catch (error) {
+    console.error("Error deleting task:", error);
+  }
+}
+
+// Formulario para agregar tarea
+const form = document.getElementById("task-form");
+if (form) {
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const input = document.getElementById("task-input");
+    addTask(input.value);
+    input.value = "";
   });
+}
 
-  input.value = "";
-  loadTasks();
-});
-
-loadTasks();
+// Cargar tareas al iniciar
+fetchTasks();
